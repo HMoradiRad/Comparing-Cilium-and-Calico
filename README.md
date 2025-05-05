@@ -183,3 +183,108 @@ kubectl exec -n perf-test test-client-diff-node -- iperf3 -c <test-server-diff-n
 result:
 
 ![Comparison Chart](calico/Different-node-test-calico-iperf3.png)
+
+✅ Step 7 : Load Balancing Performance (calico)
+
+```bash
+cat <<EOF > load-tester.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-app
+  namespace: perf-test
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: test-app
+  template:
+    metadata:
+      labels:
+        app: test-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service
+  namespace: perf-test
+spec:
+  type: ClusterIP
+  selector:
+    app: test-app
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load-tester
+  namespace: perf-test
+spec:
+  containers:
+  - name: wrk
+    image: alpine:3.18
+    command:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache wrk curl && tail -f /dev/null
+EOF
+```
+Implement deployment and service testing :
+
+```bash
+kubectl apply -f load-tester.yaml
+```
+
+## bash script for test loadbalancer (calico)
+
+```bash
+#!/bin/bash
+# save as load-test.sh
+
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo "Starting Load Balancing Tests..."
+
+
+echo -e "${GREEN}Test 1: Basic Load Test (2 threads, 100 connections, 30s)${NC}"
+kubectl exec -it -n perf-test load-tester -- wrk -t2 -c100 -d30s http://test-service.perf-test.svc.cluster.local
+
+sleep 10
+
+echo -e "${GREEN}Test 2: High Load Test (4 threads, 500 connections, 30s)${NC}"
+kubectl exec -it -n perf-test load-tester -- wrk -t4 -c500 -d30s http://test-service.perf-test.svc.cluster.local
+
+sleep 10
+
+
+echo -e "${GREEN}Test 3: Burst Test (4 threads, 1000 connections, 10s)${NC}"
+kubectl exec -it -n perf-test load-tester -- wrk -t4 -c1000 -d10s http://test-service.perf-test.svc.cluster.local
+```
+result : 
+
+![Comparison Chart](calico/loadbalancer-calico.png)
+
+✅ Step 8 : 
