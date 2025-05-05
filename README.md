@@ -146,6 +146,7 @@ EOF
 ```bash
 kubectl exec -n perf-test <test-client-diff-node> -- /bin/sh -c "su root -c 'apt-get update && apt-get install -y iputils-ping'"
 ```
+
 ✅ Step 5: Testing pods on the same node
 
 Latency testing:
@@ -153,19 +154,32 @@ Latency testing:
 ```bash
 kubectl exec -n perf-test test-client-same-node -- ping -c 10 <test-server-same-node or IP>
 ```
+result :
+
+![Comparison Chart](calico/same--node-test-calico-ping.png)
 
 Throughput testing:
 ```bash
 kubectl exec -n perf-test test-client-same-node -- iperf3 -c <test-server-same-node or IP> -t 20
 ```
+result :
+![Comparison Chart](calico/same-node-test-iperf3-calico.png)
 
 ✅ Step 6: Different Node Tests
 
 Latency testing:
+
 ```bash
 kubectl exec -n perf-test test-client-diff-node -- ping -c 10 <test-server-diff-node or IP>
 ```
+result:
+
+![Comparison Chart](calico/different-node-test-calico-ping.png)
+
 Throughput testing:
 ```bash
 kubectl exec -n perf-test test-client-diff-node -- iperf3 -c <test-server-diff-node or IP> -t 20
 ```
+result:
+
+![Comparison Chart](calico/Different-node-test-calico-iperf3.png)
