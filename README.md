@@ -283,6 +283,11 @@ sleep 10
 echo -e "${GREEN}Test 3: Burst Test (4 threads, 1000 connections, 10s)${NC}"
 kubectl exec -it -n perf-test load-tester -- wrk -t4 -c1000 -d10s http://test-service.perf-test.svc.cluster.local
 ```
+```bash
+chmod +x load-test.sh
+./load-test.sh > calico-loadbalancer-results.txt
+```
+
 result : 
 
 ![Comparison Chart](calico/loadbalancer-calico.png)
@@ -293,7 +298,7 @@ result :
 kubectl delete -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
 ```
 
-✅ Step 8 : Install helm
+✅ Step 9 : Install helm
 
 ```bash
 wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
@@ -301,7 +306,7 @@ tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
 sudo mv linux-amd64/helm /usr/local/bin/helm
 ```
 
-✅ Step 8 : Install Cilium with Helm
+✅ Step 10 : Install Cilium with Helm
 
 ```bash
 helm repo add cilium https://helm.cilium.io/
@@ -322,7 +327,62 @@ helm install cilium cilium/cilium \
   --set cluster.name=kind \
   --set cluster.id=1
 ```
-✅ Step 9 : Rerun all tests on Cilium (like the tests above)
+✅ Step 11 : Rerun all tests on Cilium (like the tests above)
+
+Testing pods on the same node (cilium)
+
+Latency testing:
+
+```bash
+kubectl exec -n perf-test test-client-same-node -- ping -c 10 <test-server-same-node or IP>
+```
+
+result :
+
+![Comparison Chart](cilium/test-server-same-node-cilium-ping.png)
+
+
+Throughput testing:
+```bash
+kubectl exec -n perf-test test-client-same-node -- iperf3 -c <test-server-same-node or IP> -t 20
+```
+result:
+
+![Comparison Chart](cilium/test-server-same-node-iperf3-cilium.png)
+
+
+✅ Step 12: Different Node Tests
+
+
+Latency testing:
+
+```bash
+kubectl exec -n perf-test test-client-diff-node -- ping -c 10 <test-server-diff-node or IP>
+```
+
+result :
+
+![Comparison Chart](cilium/Different-node-cilium-ping.png)
+
+
+Throughput testing:
+```bash
+kubectl exec -n perf-test test-client-diff-node -- iperf3 -c <test-server-diff-node or IP> -t 20
+```
+result:
+
+![Comparison Chart](cilium/Different-node-cilium-iperf3.png)
 
 
 
+✅ Step 13 : Load Balancing Performance (cilium)
+
+run script :
+
+```bash
+./load-test.sh > cilium-loadbalancer-results.txt
+```
+
+result :
+
+![Comparison Chart](cilium/loadbalancer-test-cilium.png)
