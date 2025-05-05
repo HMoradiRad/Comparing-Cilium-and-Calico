@@ -1,2 +1,171 @@
-# Comparing-Cilium-and-Calico
-Evaluate and compare the network latency and throughput of Cilium and Calico as Kubernetes CNI in a cluster.
+# 🔬 Comparing Cilium and Calico as Kubernetes CNI Plugins
+
+## 📌 Objective
+
+This document provides a technical comparison of **Cilium** and **Calico** as Container Network Interface (CNI) plugins in a Kubernetes cluster.  
+We measure and compare their **network latency**, **throughput**, and **load balancing performance** using standard tools and test cases.
+
+---
+
+## 📋 Requirements
+
+### System Requirements
+- Linux system (Ubuntu 20.04+ recommended)
+- 8 GB RAM minimum
+- 2+ vCPUs
+- Docker installed
+- `kubectl` installed
+- Internet access to download container images
+
+### Tools Used
+- [kind](https://kind.sigs.k8s.io/) (Kubernetes in Docker)
+- [iperf3](https://iperf.fr/) (network throughput testing)
+- `ping` (latency testing)
+- `wrk` or `hey` (HTTP load testing)
+- `cilium` CLI
+- `calico` manifests
+
+---
+
+## 🚀 Step-by-Step Setup
+
+### ✅ Step 1: Create Kind Cluster
+```bash
+cat <<EOF > kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+networking:
+  disableDefaultCNI: true
+EOF
+```
+
+```bash 
+kind create cluster --config kind-config.yaml 
+```
+
+✅ Step 2: Deploy Calico CNI
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+```
+
+Wait until pods are Running:
+```bash
+kubectl get pods -n kube-system
+```
+
+✅ Step 3: First test: Pod-to-Pod communication
+
+```bash
+cat <<EOF > pod-to-pod-test.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: perf-test
+---
+# Pod 1 - Server
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-server-same-node
+  namespace: perf-test
+  labels:
+    app: perf-test
+    test-group: group1
+spec:
+  containers:
+  - name: iperf3-server
+    image: docker.arvancloud.ir/networkstatic/iperf3
+    command: ["iperf3", "-s"]
+---
+# Pod 2 - Client (Same Node)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-client-same-node
+  namespace: perf-test
+  labels:
+    app: perf-test
+    test-group: group1
+spec:
+  containers:
+  - name: iperf3-client
+    image: docker.arvancloud.ir/networkstatic/iperf3
+    command: ["sleep", "infinity"]
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            test-group: group1
+        topologyKey: "kubernetes.io/hostname"
+---
+# Pod 3 - Server (Different Node)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-server-diff-node
+  namespace: perf-test
+  labels:
+    app: perf-test
+    test-group: group2
+spec:
+  containers:
+  - name: iperf3-server
+    image: docker.arvancloud.ir/networkstatic/iperf3
+    command: ["iperf3", "-s"]
+---
+# Pod 4 - Client (Different Node)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-client-diff-node
+  namespace: perf-test
+  labels:
+    app: perf-test
+    test-group: group2
+spec:
+  containers:
+  - name: iperf3-client
+    image: docker.arvancloud.ir/networkstatic/iperf3
+    command: ["sleep", "infinity"]
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            test-group: group2
+        topologyKey: "kubernetes.io/hostname"
+EOF
+```
+✅ Step 4: Install ping on all pods
+```bash
+kubectl exec -n perf-test <test-client-diff-node> -- /bin/sh -c "su root -c 'apt-get update && apt-get install -y iputils-ping'"
+```
+✅ Step 5: Testing pods on the same node
+
+Latency testing:
+
+```bash
+kubectl exec -n perf-test test-client-same-node -- ping -c 10 <test-server-same-node or IP>
+```
+
+Throughput testing:
+```bash
+kubectl exec -n perf-test test-client-same-node -- iperf3 -c <test-server-same-node or IP> -t 20
+```
+
+✅ Step 6: Different Node Tests
+
+Latency testing:
+```bash
+kubectl exec -n perf-test test-client-diff-node -- ping -c 10 <test-server-diff-node or IP>
+```
+Throughput testing:
+```bash
+kubectl exec -n perf-test test-client-diff-node -- iperf3 -c <test-server-diff-node or IP> -t 20
+```
