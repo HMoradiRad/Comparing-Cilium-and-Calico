@@ -287,4 +287,42 @@ result :
 
 ![Comparison Chart](calico/loadbalancer-calico.png)
 
-✅ Step 8 : 
+✅ Step 8 : Remove calico
+
+```bash
+kubectl delete -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+```
+
+✅ Step 8 : Install helm
+
+```bash
+wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm
+```
+
+✅ Step 8 : Install Cilium with Helm
+
+```bash
+helm repo add cilium https://helm.cilium.io/
+helm repo update
+```
+
+Install Cilium using Helm :
+
+```bash
+helm install cilium cilium/cilium \
+  --namespace kube-system \
+  --set nodeinit.enabled=true \
+  --set kubeProxyReplacement=true \
+  --set hostServices.enabled=true \
+  --set externalIPs.enabled=true \
+  --set nodePort.enabled=true \
+  --set hostPort.enabled=true \
+  --set cluster.name=kind \
+  --set cluster.id=1
+```
+✅ Step 9 : Rerun all tests on Cilium (like the tests above)
+
+
+
