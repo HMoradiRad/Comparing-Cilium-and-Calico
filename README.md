@@ -389,4 +389,29 @@ result :
 
 
 
+## Conclusion
 
+Based on the test results, we can draw the following conclusions:
+
+Network Throughput:
+
+Cilium shows superior performance in both same-node and different-node scenarios
+Same-node throughput: Cilium (32.9 Gbits/sec) outperforms Calico (23.8 Gbits/sec) by approximately 38%
+Different-node throughput: Cilium (13.6 Gbits/sec) performs better than Calico (11.7 Gbits/sec) by about 16%
+Network Latency:
+
+For different-node communication, Calico shows slightly better latency (0.205ms vs 0.240ms)
+For same-node communication, performance is comparable with Cilium at 0.83ms and Calico at 0.91ms
+Load Balancing Performance:
+
+Cilium consistently shows better performance in load balancing scenarios
+Request handling capacity is approximately 5-10% higher in Cilium
+Transfer rates are consistently higher in Cilium across all test rounds
+Cilium shows better scaling under sustained load, with performance improving in subsequent test rounds
+Overall Assessment:
+
+Cilium demonstrates better overall performance, particularly in high-throughput scenarios
+Cilium appears to be more efficient in load balancing and same-node communication
+Both CNIs show stable and reliable performance, suitable for production workloads
+The choice between the two might depend on specific use cases, with Cilium having an edge in high-performance requirements
+This comparison suggests that Cilium might be the better choice for environments requiring high network throughput and efficient load balancing, while both solutions provide acceptable latency for most use cases.
